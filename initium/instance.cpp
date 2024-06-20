@@ -162,4 +162,12 @@ namespace initium {
 			vkDestroyInstance(instance_, nullptr);
 		}
 	}
+
+	std::optional<Device> Instance::create_device(DeviceRequirements requirements) {
+		std::optional<VkPhysicalDevice> maybe_device = pickPhysicalDevice(instance_, requirements);
+		if (!maybe_device.has_value()) {
+			return std::nullopt;
+		}
+		VkPhysicalDevice physical_device = maybe_device.value();
+	}
 }

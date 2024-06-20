@@ -33,6 +33,8 @@ int main() {
 	}
 	std::unique_ptr<initium::Instance> instance = std::move(instance_result.value());
 
+	initium::Device device = instance.get()->create_device({});
+
 	// Render loop
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();

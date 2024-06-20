@@ -8,6 +8,8 @@
 #include <vector>
 #include <memory>
 
+#include "device.hpp"
+
 namespace initium {
 	struct InstanceParams {
 		const char* application_name = "Initium";
@@ -20,6 +22,9 @@ namespace initium {
 	public:
 		Instance(VkInstance instance, VkDebugUtilsMessengerEXT debug_messenger);
 		~Instance();
+
+		// Creates a device class
+		std::optional<Device> create_device(DeviceRequirements requirements);
 
 		friend std::expected<std::unique_ptr<Instance>, std::string> create_instance(InstanceParams params);
 	private:
