@@ -33,7 +33,20 @@ int main() {
 	}
 	std::unique_ptr<initium::Instance> instance = std::move(instance_result.value());
 
-	initium::Device device = instance.get()->create_device({});
+	std::unique_ptr<initium::Queue> graphics_queue = nullptr;
+	std::unique_ptr<initium::Queue> transfer_queue = nullptr;
+
+	auto device_result = instance.get()->create_device({
+		.queue_requests = {
+			{.queue = graphics_queue.get(), .flags = VK_QUEUE_GRAPHICS_BIT},
+			{.queue = transfer_queue.get(), .flags = VK_QUEUE_TRANSFER_BIT}
+		}
+		});
+	if (!device_result.has_value()) {
+		std::cerr << device_result.error() << std::endl;
+		return 1;
+	}
+	std::unique_ptr<initium::Device> device = std::move(device_result.value());
 
 	// Render loop
 	while (!glfwWindowShouldClose(window)) {

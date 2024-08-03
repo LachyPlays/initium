@@ -24,7 +24,7 @@ namespace initium {
 		~Instance();
 
 		// Creates a device class
-		std::optional<Device> create_device(DeviceRequirements requirements);
+		std::expected<std::unique_ptr<Device>, std::string> create_device(DeviceRequirements requirements);
 
 		friend std::expected<std::unique_ptr<Instance>, std::string> create_instance(InstanceParams params);
 	private:
