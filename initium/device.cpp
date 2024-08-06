@@ -31,7 +31,20 @@ std::unordered_map<int, initium::QueueRequest> mapQueueFamilies(VkPhysicalDevice
 		// Find the best matching queue family, if any
 		for (int i = 0; i < families.size(); i++) {
 			// Check if all requested flags are in this queue, and that this queue is not empty
-			if (((families[i].queueFlags & request.flags) == request.flags) && families[i].queueCount > 0) {
+			bool required_flags = (families[i].queueFlags & request.flags) == request.flags;
+			bool count_gt_z = families[i].queueCount > 0;
+
+			// If present is not needed, this stays true
+			bool present_capable = true;
+			if (request.present_surface != VK_NULL_HANDLE) {
+				// This is only run if present_surface was set
+				VkBool32 present_supported = VK_FALSE;
+				vkGetPhysicalDeviceSurfaceSupportKHR(device, i, request.present_surface, &present_supported);
+				present_capable = present_supported;
+			}
+			
+
+			if (required_flags && count_gt_z && present_capable) {
 				std::bitset<32> bits(families[i].queueFlags);
 
 				// Check if this has fewer bits/is more specific than the next best queue
@@ -256,6 +269,14 @@ namespace initium {
 		VkDevice device = VK_NULL_HANDLE;
 		if (vkCreateDevice(physical_device, &create_info, nullptr, &device) != VK_SUCCESS) {
 			return std::nullopt;
+		}
+
+		// Queue population
+		for (std::pair<const int, QueueRequest>& queue_mapping : queue_map) {
+			VkQueue raw_queue = VK_NULL_HANDLE;
+			vkGetDeviceQueue(device, queue_mapping.first, 0, &raw_queue);
+
+			*queue_mapping.second.queue = std::make_unique<Queue>(raw_queue, queue_mapping.first);
 		}
 
 		return device;

@@ -17,7 +17,7 @@ int main() {
 	uint32_t glfw_extension_count = 0;
 	const char** glfw_extensions_raw = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 	std::vector<const char*> extensions(glfw_extension_count);
-	for (int i = 0; i < glfw_extension_count; i++) { extensions[i] = glfw_extensions_raw[i]; };
+	for (unsigned int i = 0; i < glfw_extension_count; i++) { extensions[i] = glfw_extensions_raw[i]; };
 	extensions.push_back("VK_EXT_debug_utils");
 
 	// Initialize renderer
@@ -33,13 +33,20 @@ int main() {
 	}
 	std::unique_ptr<initium::Instance> instance = std::move(instance_result.value());
 
+	// Surface creation
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	if (glfwCreateWindowSurface(instance.get()->get_raw_instance(), window, nullptr, &surface) != VK_SUCCESS) {
+		std::cerr << "Failed to create window surface" << std::endl;
+		return 1;
+	}
+
 	std::unique_ptr<initium::Queue> graphics_queue = nullptr;
 	std::unique_ptr<initium::Queue> transfer_queue = nullptr;
 
 	auto device_result = instance.get()->create_device({
 		.queue_requests = {
-			{.queue = graphics_queue.get(), .flags = VK_QUEUE_GRAPHICS_BIT},
-			{.queue = transfer_queue.get(), .flags = VK_QUEUE_TRANSFER_BIT}
+			{.queue = &graphics_queue, .flags = VK_QUEUE_GRAPHICS_BIT, .present_surface = surface},
+			{.queue = &transfer_queue, .flags = VK_QUEUE_TRANSFER_BIT}
 		}
 		});
 	if (!device_result.has_value()) {
@@ -47,13 +54,16 @@ int main() {
 		return 1;
 	}
 	std::unique_ptr<initium::Device> device = std::move(device_result.value());
+	
+
 
 	// Render loop
+	printf("@@@@ INITIALISATION COMPLETE @@@@\n");
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 	}
-
 	// Cleanup
+	vkDestroySurfaceKHR(instance.get()->get_raw_instance(), surface, nullptr);
 	glfwDestroyWindow(window);
 	glfwTerminate();
 

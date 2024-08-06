@@ -184,4 +184,8 @@ namespace initium {
 
 		return std::make_unique<Device>(instance_, physical_device, device);
 	} 
+
+	VkInstance Instance::get_raw_instance() const {
+		return instance_;
+	}
 }

@@ -9,7 +9,7 @@
 namespace initium {
 	class Queue {
 	public:
-		Queue(VkQueue queue, int queue_family) : queue_(queue), queue_family_(queue_family) {}
+		Queue(VkQueue queue, int queue_family);
 	protected:
 	private:
 		VkQueue queue_;

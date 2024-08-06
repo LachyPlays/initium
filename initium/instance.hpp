@@ -26,6 +26,9 @@ namespace initium {
 		// Creates a device class
 		std::expected<std::unique_ptr<Device>, std::string> create_device(DeviceRequirements requirements);
 
+		// Returns the raw VkInstance
+		VkInstance get_raw_instance() const;
+
 		friend std::expected<std::unique_ptr<Instance>, std::string> create_instance(InstanceParams params);
 	private:
 		VkInstance instance_ = VK_NULL_HANDLE;

@@ -17,8 +17,9 @@
 namespace initium {
 	// A request for a certain queue type
 	struct QueueRequest {
-		Queue *queue = nullptr;
-		VkQueueFlags flags = {};
+		std::unique_ptr<Queue> *queue = nullptr;
+		VkQueueFlags flags = NULL;
+		VkSurfaceKHR present_surface = VK_NULL_HANDLE;
 	};
 
 	// A requirement for a certain image format and associated properties
