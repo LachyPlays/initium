@@ -47,14 +47,15 @@ int main() {
 		.queue_requests = {
 			{.queue = &graphics_queue, .flags = VK_QUEUE_GRAPHICS_BIT, .present_surface = surface},
 			{.queue = &transfer_queue, .flags = VK_QUEUE_TRANSFER_BIT}
-		}
+		},
+		.required_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME}
 		});
 	if (!device_result.has_value()) {
 		std::cerr << device_result.error() << std::endl;
 		return 1;
 	}
 	std::unique_ptr<initium::Device> device = std::move(device_result.value());
-	
+
 
 
 	// Render loop
