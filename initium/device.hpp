@@ -13,13 +13,14 @@
 #include <unordered_map>
 
 #include "queue.hpp"
+#include "selector.hpp"
 
 namespace initium {
 	std::optional<VkDevice> createLogicalDevice(
 		VkPhysicalDevice physical_device,
 		VkPhysicalDeviceFeatures features,
 		std::vector<const char*> extensions,
-		std::vector<QueueRequest> queue_requests,
+		std::vector<QueueRequest>& queue_requests,
 		bool enable_validation_layers
 	);
 

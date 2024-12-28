@@ -21,9 +21,11 @@
 namespace initium {
 	// A request for a certain queue type
 	struct QueueRequest {
-		std::unique_ptr<Queue>* queue = nullptr;
+		std::optional<Queue> queue = std::nullopt;
 		VkQueueFlags flags = NULL;
+		VkDeviceQueueCreateFlags create_flags = NULL;
 		VkSurfaceKHR present_surface = VK_NULL_HANDLE;
+		float priority = 1.0f;
 	};
 
 	// A requirement for a certain image format and associated properties
@@ -48,30 +50,14 @@ namespace initium {
 
 	// Requirements for a physical device
 	struct DeviceRequirements {
-		std::vector<QueueRequest> queue_requests = {};
-		std::vector<ImageFormatRequirement> required_formats = {};
-		VkPhysicalDeviceFeatures required_features = {};
-		LimitRequirements limit_requirements = {};
-		std::vector<const char*> required_extensions = {};
-		bool enable_validation_layers = false;
+		std::vector<QueueRequest>& queue_requests;
+		std::vector<ImageFormatRequirement> formats = {};
+		VkPhysicalDeviceFeatures features = {};
+		LimitRequirements limits = {};
+		std::vector<const char*> extensions = {};
 	};
 
-	enum DeviceSuitability {
-		Suitable,
-		UnsatisfiedQueues,
-		UnsatisfiedFormats,
-		UnsatisfiedFeatures,
-		UnsatisfiedLimits,
-	};
-
-	std::expected<VkPhysicalDevice, std::string> pickPhysicalDevice(VkInstance instance, DeviceRequirements requirements);
-
-	typedef struct {
-		VkPhysicalDevice device = VK_NULL_HANDLE;
-
-	} SelectorResult;
-
-	std::expected<SelectorResult, std::string> pickPhysicalDevice();
+	std::expected<VkPhysicalDevice, std::string> pickPhysicalDevice(VkInstance instance, DeviceRequirements requirements, DeviceRequirements optional_requirements);
 }
 
 #endif

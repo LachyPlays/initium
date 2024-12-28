@@ -164,8 +164,8 @@ namespace initium {
 		}
 	}
 
-	std::expected<std::unique_ptr<Device>, std::string> Instance::create_device(DeviceRequirements requirements) {
-		std::expected<VkPhysicalDevice, std::string> maybe_physical_device = pickPhysicalDevice(instance_, requirements);
+	std::expected<std::unique_ptr<Device>, std::string> Instance::create_device(DeviceRequirements requirements, DeviceRequirements optional_requirements) {
+		std::expected<VkPhysicalDevice, std::string> maybe_physical_device = pickPhysicalDevice(instance_, requirements, optional_requirements);
 		if (maybe_physical_device.has_value()) {
 			VkPhysicalDeviceProperties properties;
 			vkGetPhysicalDeviceProperties(maybe_physical_device.value(), &properties);
@@ -176,7 +176,7 @@ namespace initium {
 		}
 		VkPhysicalDevice physical_device = maybe_physical_device.value();
 
-		std::optional<VkDevice> maybe_device = createLogicalDevice(physical_device, requirements.required_features, requirements.required_extensions, requirements.queue_requests, (debug_messenger_ != VK_NULL_HANDLE));
+		std::optional<VkDevice> maybe_device = createLogicalDevice(physical_device, requirements.features, requirements.extensions, requirements.queue_requests, (debug_messenger_ != VK_NULL_HANDLE));
 		if (!maybe_device.has_value()) {
 			return std::unexpected<std::string>("Failed to create logical device");
 		}

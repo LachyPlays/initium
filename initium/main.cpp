@@ -40,22 +40,25 @@ int main() {
 		return 1;
 	}
 
-	std::unique_ptr<initium::Queue> graphics_queue = nullptr;
-	std::unique_ptr<initium::Queue> transfer_queue = nullptr;
+	// Device queues
+	std::vector<initium::QueueRequest> queue_requests = {
+			{.flags = VK_QUEUE_GRAPHICS_BIT, .present_surface = surface},
+			{.flags = VK_QUEUE_TRANSFER_BIT}
+	};
 
 	auto device_result = instance.get()->create_device({
-		.queue_requests = {
-			{.queue = &graphics_queue, .flags = VK_QUEUE_GRAPHICS_BIT, .present_surface = surface},
-			{.queue = &transfer_queue, .flags = VK_QUEUE_TRANSFER_BIT}
-		},
-		.required_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME}
-		});
+		.queue_requests = queue_requests,
+		.extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME}
+		}, { .queue_requests = queue_requests });
 	if (!device_result.has_value()) {
 		std::cerr << device_result.error() << std::endl;
 		return 1;
 	}
 	std::unique_ptr<initium::Device> device = std::move(device_result.value());
-
+	if (!queue_requests[0].queue.has_value()) { std::cerr << "Failed to create graphics queue" << std::endl; return 1; }
+	if (!queue_requests[1].queue.has_value()) { std::cerr << "Failed to create transfer queue" << std::endl; return 1; }
+	initium::Queue graphics_queue = queue_requests[0].queue.value();
+	initium::Queue transfer_queue = queue_requests[1].queue.value();
 
 
 	// Render loop
