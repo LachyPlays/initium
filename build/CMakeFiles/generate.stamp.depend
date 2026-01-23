@@ -1,0 +1,24 @@
+# CMake generation dependency list for this directory.
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeCXXInformation.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeCommonLanguageInclude.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeGenericSystem.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeInitializeConfigs.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeLanguageInformation.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeRCInformation.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeSystemSpecificInformation.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/CMakeSystemSpecificInitialize.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/CMakeCommonCompilerMacros.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/MSVC-CXX.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Compiler/MSVC.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/FindPackageHandleStandardArgs.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/FindPackageMessage.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/FindVulkan.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Platform/Windows-Initialize.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Platform/Windows-MSVC-CXX.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Platform/Windows-MSVC.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Platform/Windows.cmake
+C:/Program Files/CMake/share/cmake-3.29/Modules/Platform/WindowsPaths.cmake
+C:/Users/munda/Desktop/coding/initium/CMakeLists.txt
+C:/Users/munda/Desktop/coding/initium/build/CMakeFiles/3.29.7/CMakeCXXCompiler.cmake
+C:/Users/munda/Desktop/coding/initium/build/CMakeFiles/3.29.7/CMakeRCCompiler.cmake
+C:/Users/munda/Desktop/coding/initium/build/CMakeFiles/3.29.7/CMakeSystem.cmake

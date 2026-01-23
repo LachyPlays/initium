@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Sample (Windows)",
+            "type": "cppvsdbg",              // CHANGED: Use MSVC debugger
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples/${input:sampleExecutable}/Debug/${input:sampleExecutable}.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/samples/${input:sampleExecutable}",
+            "environment": [],
+            "console": "externalTerminal",   // CHANGED: externalConsole is deprecated in some configs
+            "preLaunchTask": "CMake: Build Project"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "sampleExecutable",
+            "type": "pickString",
+            "description": "Select sample to debug",
+            "options": ["hello_triangle", "hello_cube"],
+            "default": "hello_triangle"
+        }
+    ]
+}

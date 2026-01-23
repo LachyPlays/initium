@@ -1,0 +1,10 @@
+^C:\USERS\MUNDA\DESKTOP\CODING\INITIUM\BUILD\CMAKEFILES\664E0D0D179758D739F81A457EFBC285\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/munda/Desktop/coding/initium -BC:/Users/munda/Desktop/coding/initium/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/munda/Desktop/coding/initium/build/initium.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

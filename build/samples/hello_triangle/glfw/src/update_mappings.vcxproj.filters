@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\munda\Desktop\coding\initium\build\CMakeFiles\9300186e9eb41d5e019b48587db7f781\update_mappings.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\munda\Desktop\coding\initium\samples\hello_triangle\glfw\src\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\munda\Desktop\coding\initium\samples\hello_triangle\glfw\src\mappings.h.in">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="C:\Users\munda\Desktop\coding\initium\samples\hello_triangle\glfw\CMake\GenerateMappings.cmake" />
+    <None Include="C:\Users\munda\Desktop\coding\initium\build\samples\hello_triangle\glfw\src\CMakeFiles\update_mappings" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{D4F35B95-DDA2-349E-95E9-8C5A397D56BF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{C825699E-F750-3EAB-A0F7-57A28902E6E0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
