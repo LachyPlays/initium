@@ -245,12 +245,14 @@ int main(int argc, char* argv[])
   std::string gltf_warn;
 
   std::string model_path = (std::filesystem::current_path() / "suzanne" / "glTF" / "Suzanne.gltf").string();
-  std::replace(model_path.begin(), model_path.end(), '\\', '/');
 
   if (!gltf_loader.LoadASCIIFromFile(&model, &gltf_err, &gltf_warn, model_path)) {
     printf("%s\n", gltf_err.c_str());
     return 1;
   }
+  if (!gltf_err.empty()) { printf("%s\n", gltf_err.c_str()); }
+  if (!gltf_warn.empty()) { printf("%s\n", gltf_warn.c_str()); }
+
   if (!gltf_err.empty()) { printf("%s\n", gltf_err.c_str()); }
   if (!gltf_warn.empty()) { printf("%s\n", gltf_warn.c_str()); }
 
