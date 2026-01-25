@@ -41,9 +41,12 @@ function(compile_glsl TARGET)
     add_dependencies(${TARGET} ${TARGET}_shaders)
 endfunction()
 
+# Utility includes for samples
 add_subdirectory(glfw)
 add_subdirectory(glm)
+add_subdirectory(tinygltf)
 
 # Add all sample folders here
 add_subdirectory(hello_triangle)
 add_subdirectory(hello_cube)
+add_subdirectory(suzanne_test)
