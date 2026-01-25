@@ -3,14 +3,27 @@
     "configurations": [
         {
             "name": "Debug Sample (Windows)",
-            "type": "cppvsdbg",              // CHANGED: Use MSVC debugger
+            "type": "cppvsdbg",              
             "request": "launch",
             "program": "${workspaceFolder}/build/samples/${input:sampleExecutable}/Debug/${input:sampleExecutable}.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build/samples/${input:sampleExecutable}",
             "environment": [],
-            "console": "externalTerminal",   // CHANGED: externalConsole is deprecated in some configs
+            "externalConsole": false,
+            "preLaunchTask": "CMake: Build Project"
+        },
+        {
+            "name": "Debug Sample (Linux)",
+            "type": "cppdbg",
+            "MIMode": "gdb",           
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples/${input:sampleExecutable}/${input:sampleExecutable}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/samples/${input:sampleExecutable}",
+            "environment": [],
+            "externalConsole": false,
             "preLaunchTask": "CMake: Build Project"
         }
     ],

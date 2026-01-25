@@ -42,6 +42,7 @@ function(compile_glsl TARGET)
 endfunction()
 
 add_subdirectory(glfw)
+add_subdirectory(glm)
 
 # Add all sample folders here
 add_subdirectory(hello_triangle)

@@ -1,6 +1,7 @@
 #include "instance.hpp"
 
 #include <iostream>
+#include <cstring>
 
 bool checkExtensionSupport(std::vector<const char*> extensions) {
 	uint32_t extension_count = 0;

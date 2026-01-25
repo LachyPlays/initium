@@ -324,7 +324,7 @@ namespace initium {
 				vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, request.surface, &capabilities);
 
 				// Generate values based upon the surface's capabilities
-				uint32_t image_count = request.surface_count; // ! TODO ! Handle capabilities of surface
+				uint32_t image_count = std::max(std::min(request.min_surface_count, capabilities.maxImageCount), capabilities.minImageCount); 
 				VkExtent2D image_extent = capabilities.currentExtent.width == UINT32_MAX ? request.window_size : capabilities.currentExtent;
 				VkSurfaceTransformFlagBitsKHR transform = request.transform_flags == 0 ? capabilities.currentTransform : request.transform_flags;
 

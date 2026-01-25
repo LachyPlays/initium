@@ -27,6 +27,8 @@ uint32_t getRequiredTypeFlags(initium::MemoryType type) {
 
 uint32_t getOptionalTypeFlags(initium::MemoryType type) {
 	switch (type) {
+	case initium::GpuLocalMemory:
+		return 0;
 	case initium::CpuLocalMemory:
 		return VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
 	case initium::GpuLocalHostCoherent:

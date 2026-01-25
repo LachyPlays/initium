@@ -13,6 +13,7 @@ target_link_libraries(hello_cube
     PRIVATE
         initium
         glfw
+        glm
         Vulkan::Vulkan
 )
 

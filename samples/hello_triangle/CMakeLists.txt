@@ -13,6 +13,7 @@ target_link_libraries(hello_triangle
     PRIVATE
         initium
         glfw
+        glm
         Vulkan::Vulkan
 )
 

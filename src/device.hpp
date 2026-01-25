@@ -49,7 +49,7 @@ namespace initium {
 		VkExtent2D window_size;
 		VkSurfaceFormatKHR format;
 		VkPresentModeKHR present_mode;
-		uint32_t surface_count = 2;
+		uint32_t min_surface_count = 2;
 		VkSurfaceTransformFlagBitsKHR transform_flags = {};
 		VkCompositeAlphaFlagBitsKHR alpha_flags = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		VkBool32 clipped = VK_TRUE;
