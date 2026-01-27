@@ -9,6 +9,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
+#include "allocation.hpp"
 #include "buffer.hpp"
 #include "command.hpp"
 #include "descriptor.hpp"

@@ -5,15 +5,9 @@
 #include <optional>
 #include <vector>
 
+#include "allocation.hpp"
+
 namespace initium {
-	enum MemoryType {
-		CpuLocalMemory,
-		GpuLocalMemory,
-
-		GpuLocalHostVisible,
-		GpuLocalHostCoherent,
-	};
-
 	struct BufferParams {
 		VkBufferCreateFlags flags = 0;
 		size_t size;

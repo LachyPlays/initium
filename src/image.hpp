@@ -3,6 +3,9 @@
 
 #include <vulkan/vulkan.h>
 #include <optional>
+#include <vector>
+
+#include "buffer.hpp"
 
 namespace initium {
 	struct ImageViewSwizzles {
@@ -24,7 +27,25 @@ namespace initium {
 		uint32_t layer_count = 1;
 	};
 
+	struct ImageParams {
+		uint32_t width, height;
+		VkImageType type;
+		VkFormat format;
+		VkImageTiling tiling;
+		VkImageUsageFlags usage;
+		std::vector<uint32_t> queue_families;
+
+		VkImageLayout initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkSampleCountFlagBits samples;
+		VkImageCreateFlags flags;
+		uint32_t depth = 1;
+		uint32_t mip_levels = 1;
+		uint32_t array_layers = 1;
+	};
+
 	std::optional<VkImageView> create_image_view(VkDevice device, ImageViewParams params);
+	std::optional<VkImage> createImage(VkDevice device, ImageParams params);
+	std::optional<VkDeviceMemory> createImageAllocation(VkDevice device, VkPhysicalDevice phys_device, VkImage image, initium::MemoryType type);
 }
 
 #endif // !IMAGE_HPP
