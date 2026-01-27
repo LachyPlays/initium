@@ -251,46 +251,62 @@ int main(int argc, char* argv[])
     return 1;
   }
   if (!gltf_err.empty()) { printf("%s\n", gltf_err.c_str()); }
-  if (!gltf_warn.empty()) { printf("%s\n", gltf_warn.c_str()); }
+	if (!gltf_warn.empty()) { printf("%s\n", gltf_warn.c_str()); }
 
   if (!gltf_err.empty()) { printf("%s\n", gltf_err.c_str()); }
   if (!gltf_warn.empty()) { printf("%s\n", gltf_warn.c_str()); }
 
-  // ! TODO ! Load model data into buffers
+	// Populate indices
+	tinygltf::Accessor index_accessor = model.accessors[model.meshes[0].primitives[0].indices];
+	tinygltf::BufferView index_data_view = model.bufferViews[index_accessor.bufferView];
+	tinygltf::Buffer index_data_buffer = model.buffers[index_data_view.buffer];
+  assert(index_accessor.type == TINYGLTF_TYPE_SCALAR);
+	assert(index_accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT);
+	
+	std::vector<uint16_t> indices(index_accessor.count);
+	for (int i = 0; i < index_accessor.count; i++) {
+		indices[i] = ((uint16_t*)index_data_buffer.data.data())[i];
+	}
 
-  typedef struct
+	// Populate vertices
+	tinygltf::Accessor vert_pos_accessor = model.accessors[model.meshes[0].primitives[0].attributes["POSITION"]];
+  tinygltf::BufferView vert_pos_view = model.bufferViews[vert_pos_accessor.bufferView];
+  uint8_t* vert_pos_start = model.buffers[vert_pos_view.buffer].data.data() + vert_pos_view.byteOffset + vert_pos_accessor.byteOffset;
+  size_t vert_pos_stride = vert_pos_accessor.ByteStride(vert_pos_view);
+
+	tinygltf::Accessor vert_nor_accessor = model.accessors[model.meshes[0].primitives[0].attributes["NORMAL"]];
+  tinygltf::BufferView vert_nor_view = model.bufferViews[vert_nor_accessor.bufferView];
+  uint8_t* vert_nor_start = model.buffers[vert_nor_view.buffer].data.data() + vert_nor_view.byteOffset + vert_nor_accessor.byteOffset;
+  size_t vert_nor_stride = vert_nor_accessor.ByteStride(vert_nor_view);
+	
+	typedef struct
   {
     glm::vec3 pos;
+    glm::vec3 normal;
     glm::vec3 colour;
   } Vertex;
+  std::vector<Vertex> vertices(vert_pos_accessor.count);
+	for(int i = 0; i < vert_pos_accessor.count; i++) {
+    const float* vert_pos_data = (const float*)(vert_pos_start + (i * vert_pos_stride));
+    const float* vert_nor_data = (const float*)(vert_nor_start + (i * vert_nor_stride));
 
-  const std::vector<Vertex> vertices = {
-      {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // 0 Front Top left
-      {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},  // 1 Front Top right
-      {{-0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},  // 2 Front Bottom left
-      {{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}},   // 3 Front Bottom right
-      {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},  // 4 Back Top left
-      {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},   // 5 Back Top right
-      {{-0.5f, 0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},   // 6 Back Bottom left
-      {{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}}     // 7 Back Bottom right
-  };
+    glm::vec3 position = glm::vec3(
+      vert_pos_data[0], 
+      vert_pos_data[1],
+      vert_pos_data[2]
+    );
+
+    glm::vec3 normal = glm::vec3(
+      vert_nor_data[0],
+      vert_nor_data[1],
+      vert_nor_data[2]
+    );
+
+    vertices[i] = Vertex{position, normal, glm::vec3(position.x, position.y, position.z)};
+	}
+
   size_t vertice_bytes = sizeof(Vertex) * vertices.size();
-
-  const std::vector<uint16_t> indices = {// Front face (z = -0.5)
-                                         0, 2, 1, 1, 2, 3,
-                                         // Back face (z = +0.5)
-                                         5, 7, 4, 4, 7, 6,
-                                         // Left face (x = -0.5)
-                                         4, 6, 0, 0, 6, 2,
-                                         // Right face (x = +0.5)
-                                         1, 3, 5, 5, 3, 7,
-                                         // Top face (y = -0.5)
-                                         4, 0, 5, 5, 0, 1,
-                                         // Bottom face (y = +0.5)
-                                         2, 6, 3, 3, 6, 7};
-
-  size_t indice_bytes = sizeof(uint32_t) * indices.size();
-
+  size_t indice_bytes = sizeof(uint16_t) * indices.size();
   size_t staging_bytes = vertice_bytes + indice_bytes;
 
   initium::BufferParams vertex_buffer_params = {
@@ -371,7 +387,7 @@ int main(int argc, char* argv[])
   binding_descriptors.stride = sizeof(Vertex);
   binding_descriptors.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-  std::vector<VkVertexInputAttributeDescription> attribute_descriptors(2);
+  std::vector<VkVertexInputAttributeDescription> attribute_descriptors(3);
   attribute_descriptors[0].binding = 0;
   attribute_descriptors[0].location = 0;
   attribute_descriptors[0].format = VK_FORMAT_R32G32B32_SFLOAT;
@@ -380,7 +396,12 @@ int main(int argc, char* argv[])
   attribute_descriptors[1].binding = 0;
   attribute_descriptors[1].location = 1;
   attribute_descriptors[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-  attribute_descriptors[1].offset = offsetof(Vertex, colour);
+  attribute_descriptors[1].offset = offsetof(Vertex, normal);
+
+  attribute_descriptors[2].binding = 0;
+  attribute_descriptors[2].location = 2;
+  attribute_descriptors[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+  attribute_descriptors[2].offset = offsetof(Vertex, colour);
 
   // Descriptors
   struct BindingUniformObject
