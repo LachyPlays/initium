@@ -57,3 +57,35 @@ std::optional<VkImage> initium::createImage(VkDevice device, initium::ImageParam
 
 	return image;
 }
+
+std::optional<VkSampler> initium::createSampler(VkDevice device, initium::SamplerParams params) {
+	VkSamplerCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	create_info.magFilter = params.mag_filter;
+	create_info.minFilter = params.min_filter;
+	create_info.addressModeU = params.mode_u;
+	create_info.addressModeV = params.mode_v;
+	create_info.addressModeW = params.mode_w;
+	create_info.borderColor = params.border_colour;
+	create_info.unnormalizedCoordinates = params.unnormalized_coords;
+	create_info.compareEnable = params.compare_enable;
+	create_info.compareOp = params.compare_op;
+	create_info.mipmapMode = params.mipmap_mode;
+	create_info.mipLodBias = params.mip_lod_bias;
+	create_info.minLod = params.min_lod;
+	create_info.maxLod = params.max_lod;
+
+	if (params.anistrophy_sample_limit > 0.0f) {
+		create_info.anisotropyEnable = VK_TRUE;
+		create_info.maxAnisotropy = params.anistrophy_sample_limit;
+	} else {
+		create_info.anisotropyEnable = VK_FALSE;
+	}
+
+	VkSampler sampler = VK_NULL_HANDLE;
+	if (vkCreateSampler(device, &create_info, nullptr, &sampler) != VK_SUCCESS) {
+		return std::nullopt;
+	}
+
+	return sampler;
+}
