@@ -120,7 +120,16 @@ namespace initium {
 		VkBool32 msaa_alpha_to_coverage = VK_FALSE;
 		VkBool32 msaa_alpha_to_one = VK_FALSE;
 
-		// ! TODO ! Depth stencil parameters
+		// Depth stencil parameters
+		VkBool32 depth_test_enable = VK_FALSE;
+		VkBool32 depth_write_enable = VK_FALSE;
+		VkCompareOp depth_compare_op = VK_COMPARE_OP_LESS;
+		VkBool32 depth_bound_test_enable = VK_FALSE;
+		float max_depth_bound = 1.0f;
+		float min_depth_bound = 0.0f;
+		VkBool32 stencil_enable = VK_FALSE;
+		VkStencilOpState stencil_front = {};
+		VkStencilOpState stencil_back = {};
 
 		// Attachment parameters (ORDER DEPENDANT)
 		std::vector<AttachmentParams> attachment_params;

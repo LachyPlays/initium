@@ -27,6 +27,7 @@ std::optional<VkRenderPass> initium::createRenderPass(VkDevice device, initium::
 		description.pipelineBindPoint = subpass.bind_point;
 		description.colorAttachmentCount = subpass.colour_references.size();
 		description.pColorAttachments = subpass.colour_references.data();
+		description.pDepthStencilAttachment = &subpass.depth_attachment_ref;
 
 		subpass_descriptors.push_back(description);
 	}

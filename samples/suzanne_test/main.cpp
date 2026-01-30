@@ -185,6 +185,17 @@ int main(int argc, char* argv[])
                                        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
                                        .entrypoint_name = "main"};
 
+  // Depth buffer creation
+  initium::ImageParams depth_params = {
+    .width = surface_width, .height = surface_height,
+    .type = VK_IMAGE_TYPE_2D, .format = VK_FORMAT_D32_SFLOAT, .tiling = VK_IMAGE_TILING_OPTIMAL, .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    .queue_families = { queue_requests[0].family_indice }
+  };
+  VkImage depth_image = initium::createImage(device, depth_params).value();
+  VkDeviceMemory depth_memory = initium::createImageAllocation(device, physical_device, depth_image, initium::GpuLocalMemory).value();
+  vkBindImageMemory(device, depth_image, depth_memory, 0);
+  VkImageView depth_image_view = initium::create_image_view(device, {.image = depth_image, .view_type = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_D32_SFLOAT, .aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT}).value();
+
   // Attachments
   initium::AttachmentParams fb_attachment = {
       .format = FRAMEBUFFER_FORMAT,
@@ -192,29 +203,35 @@ int main(int argc, char* argv[])
       .store_op = VK_ATTACHMENT_STORE_OP_STORE,
       .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
       .final_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR};
-  VkAttachmentReference fb_reference{};
-  fb_reference.attachment = 0;
-  fb_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  VkAttachmentReference fb_reference{ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+
+  initium::AttachmentParams db_attachment = {
+    .format = VK_FORMAT_D32_SFLOAT,
+    .load_op = VK_ATTACHMENT_LOAD_OP_CLEAR,
+    .store_op = VK_ATTACHMENT_STORE_OP_NONE,
+    .initial_layout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .final_layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+  };
+  VkAttachmentReference db_reference{ .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
   // Subpass dependencies
   VkSubpassDependency subpass_dependency{};
   subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
   subpass_dependency.dstSubpass = 0;
   subpass_dependency.srcStageMask =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  subpass_dependency.srcAccessMask = 0;
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+  subpass_dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
   subpass_dependency.dstStageMask =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
   // Render passes
-  initium::SubpassParams main_subpass = {.bind_point =
-                                             VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                         .colour_references = {fb_reference}};
+  initium::SubpassParams main_subpass = {.bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                         .colour_references = {fb_reference}, .depth_attachment_ref = db_reference };
 
   initium::RenderPassParams pass_params = {
       .subpasses = {main_subpass},
-      .attachments = {fb_attachment},
+      .attachments = {fb_attachment, db_attachment},
       .dependencies = {subpass_dependency}};
 
   auto pass_result = initium::createRenderPass(device, pass_params);
@@ -514,7 +531,10 @@ int main(int argc, char* argv[])
       .cull_mode = VK_CULL_MODE_BACK_BIT,
       .front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 
-      .attachment_params = {fb_attachment}};
+      .depth_test_enable = VK_TRUE,
+      .depth_write_enable = VK_TRUE,
+
+      .attachment_params = { fb_attachment }};
   auto pipeline_result =
       initium::createPipeline(device, layout, pass, pipeline_params);
   if (!pipeline_result.has_value())
@@ -525,8 +545,8 @@ int main(int argc, char* argv[])
   VkPipeline pipeline = pipeline_result.value();
 
   // Framebuffers
-  initium::FramebufferParams framebuffer_params = {.image_views =
-                                                       swapchain_views,
+  initium::FramebufferParams framebuffer_params = {.image_views = swapchain_views,
+                                                   .attachment_views = { depth_image_view },
                                                    .render_pass = pass,
                                                    .width = surface_width,
                                                    .height = surface_height};
@@ -564,7 +584,7 @@ int main(int argc, char* argv[])
   }
   command_buffers = command_buffer_result.value();
 
-  VkClearValue clear_colour = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+  std::vector<VkClearValue> clear_colours = { VkClearValue{.color = {0.0f, 0.0f, 0.0f, 1.0f}}, VkClearValue{.depthStencil = {1.0f, 0}} };
   VkViewport viewport = viewport_params.toViewport();
   VkRect2D scissor = scissor_params.toRect2D();
 
@@ -618,9 +638,11 @@ int main(int argc, char* argv[])
     vkResetFences(device, 1, &in_flight[i_f_index]);
 
     BindingUniformObject ubo{};
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.model =
-        glm::rotate(glm::mat4(1.0f), glm::radians((float)frame_number / 128.0f),
-                    glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::rotate(ubo.model, glm::radians((float)frame_number / 128.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.view =
         glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                     glm::vec3(0.0f, 0.0f, 1.0f));
@@ -666,8 +688,8 @@ int main(int argc, char* argv[])
     pass_begin_info.renderArea.extent =
         VkExtent2D{.width = (unsigned int)surface_width,
                    .height = (unsigned int)surface_height};
-    pass_begin_info.clearValueCount = 1;
-    pass_begin_info.pClearValues = &clear_colour;
+    pass_begin_info.clearValueCount = clear_colours.size();
+    pass_begin_info.pClearValues = clear_colours.data();
 
     if (initium::recordCommandBuffer(
             command_buffers[i_f_index], 0,

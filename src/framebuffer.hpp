@@ -8,6 +8,7 @@
 namespace initium {
 	struct FramebufferParams {
 		std::vector<VkImageView> image_views;
+		std::vector<VkImageView> attachment_views = {};
 
 		VkRenderPass render_pass;
 

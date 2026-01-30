@@ -153,12 +153,15 @@ std::optional<VkPipeline> initium::createPipeline(VkDevice device, VkPipelineLay
 	// In createPipeline function:
 	VkPipelineDepthStencilStateCreateInfo depth_stencil{};
 	depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	// Since you are not using depth, disable the tests:
-	depth_stencil.depthTestEnable = VK_FALSE;
-	depth_stencil.depthWriteEnable = VK_FALSE;
-	depth_stencil.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-	depth_stencil.depthBoundsTestEnable = VK_FALSE;
-	depth_stencil.stencilTestEnable = VK_FALSE;
+	depth_stencil.depthTestEnable = params.depth_test_enable;
+	depth_stencil.depthWriteEnable = params.depth_write_enable;
+	depth_stencil.depthCompareOp = params.depth_compare_op;
+	depth_stencil.depthBoundsTestEnable = params.depth_bound_test_enable;
+	depth_stencil.maxDepthBounds = params.max_depth_bound;
+	depth_stencil.minDepthBounds = params.min_depth_bound;
+	depth_stencil.stencilTestEnable = params.stencil_enable;
+	depth_stencil.front = params.stencil_front;
+	depth_stencil.back = params.stencil_back;
 
 	// Setup attachment blend params
 	std::vector<VkPipelineColorBlendAttachmentState> attachment_states{};
