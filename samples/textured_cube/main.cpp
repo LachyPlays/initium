@@ -20,6 +20,9 @@
 #include "pipeline.hpp"
 #include "renderpass.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <cstring>
 #include <iostream>
 #include <vector>
@@ -32,7 +35,7 @@ int main()
   glfwInit();
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  GLFWwindow *window = glfwCreateWindow(600, 400, "Hello triangle", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(600, 400, "Textured cube", NULL, NULL);
 
   uint32_t glfw_extension_count = 0;
   const char **glfw_extensions_raw =
@@ -48,7 +51,7 @@ int main()
   const unsigned int max_frames_in_flight = 2;
 
   auto instance_result =
-      initium::createInstance({.application_name = "Hello triangle",
+      initium::createInstance({.application_name = "Textured cube",
                                .application_version = {1, 0, 0},
                                .extensions = extensions,
                                .enable_validation_layers = true});
@@ -228,24 +231,64 @@ int main()
       initium::createCommandPool(device, transfer_pool_params).value();
   VkCommandBuffer transfer_buffer =
       initium::allocateCommandBuffer(device, transfer_pool,
-                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1)
-          .value()[0];
+                                     VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1).value()[0];
+
+  // Texture loading
+  int tex_width, tex_height, tex_channels;
+  uint8_t* tex_data = stbi_load("vulkan_logo.jpg", &tex_width, &tex_height, &tex_channels, STBI_rgb_alpha);
+  if (tex_data == nullptr) { printf("Failed to load texture from disk\n"); return 1; }
+  size_t tex_bytes = tex_width * tex_height * 4;
+
+  initium::ImageParams tex_params = {
+    .width = tex_width, .height = tex_height,
+    .type = VK_IMAGE_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_SRGB, .tiling = VK_IMAGE_TILING_OPTIMAL, .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 
+    .queue_families = { queue_requests[0].family_indice }
+     
+  };
+  VkImage tex_image = initium::createImage(device, tex_params).value();
+  VkDeviceMemory tex_memory = initium::createImageAllocation(device, physical_device, tex_image, initium::GpuLocalMemory).value();
+  vkBindImageMemory(device, tex_image, tex_memory, 0);
+  VkImageView tex_image_view = initium::create_image_view(device, {
+    .image = tex_image, .view_type = VK_IMAGE_VIEW_TYPE_2D,
+    .format = VK_FORMAT_R8G8B8A8_SRGB, .aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT}).value();
+
+  VkSampler tex_sampler = initium::createSampler(device, {.mag_filter = VK_FILTER_LINEAR, .min_filter = VK_FILTER_LINEAR}).value();
 
   // Vertex feeding
   typedef struct
   {
-    glm::vec2 pos;
-    glm::vec3 colour;
+    glm::vec3 pos;
+    glm::vec2 uv;
   } Vertex;
 
   const std::vector<Vertex> vertices = {
-      {{-0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}}, 
-      {{ 0.0f, -0.5f}, {0.0f, 1.0f, 0.0f}},  
-      {{ 0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}}
+      {{-0.5f,-0.5f,-0.5f}, {0.0f, 1.0f}},  // 0 Front Top left
+      {{ 0.5f,-0.5f,-0.5f}, {1.0f, 1.0f}},  // 1 Front Top right
+      {{-0.5f, 0.5f,-0.5f}, {0.0f, 0.0f}},  // 2 Front Bottom left
+      {{ 0.5f, 0.5f,-0.5f}, {1.0f, 0.0f}},  // 3 Front Bottom right
+      {{-0.5f,-0.5f, 0.5f}, {1.0f, 1.0f}},  // 4 Back Top left
+      {{ 0.5f,-0.5f, 0.5f}, {0.0f, 1.0f}},  // 5 Back Top right
+      {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f}},  // 6 Back Bottom left
+      {{ 0.5f, 0.5f, 0.5f}, {0.0f, 0.0f}}   // 7 Back Bottom right
   };
   size_t vertice_bytes = sizeof(Vertex) * vertices.size();
 
-  size_t staging_bytes = vertice_bytes;
+  const std::vector<uint16_t> indices = {// Front face (z = -0.5)
+                                         0, 2, 1, 1, 2, 3,
+                                         // Back face (z = +0.5)
+                                         5, 7, 4, 4, 7, 6,
+                                         // Left face (x = -0.5)
+                                         4, 6, 0, 0, 6, 2,
+                                         // Right face (x = +0.5)
+                                         1, 3, 5, 5, 3, 7,
+                                         // Top face (y = -0.5)
+                                         4, 0, 5, 5, 0, 1,
+                                         // Bottom face (y = +0.5)
+                                         2, 6, 3, 3, 6, 7};
+
+  size_t indice_bytes = sizeof(uint32_t) * indices.size();
+
+  size_t staging_bytes = vertice_bytes + indice_bytes + tex_bytes;
 
   initium::BufferParams vertex_buffer_params = {
       .size = vertice_bytes,
@@ -258,6 +301,18 @@ int main()
                                       initium::GpuLocalMemory)
           .value();
   vkBindBufferMemory(device, vertex_buffer, vertex_memory, 0);
+
+  initium::BufferParams index_buffer_params = {
+      .size = indice_bytes,
+      .usage =
+          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT};
+  VkBuffer index_buffer =
+      initium::createBuffer(device, index_buffer_params).value();
+  VkDeviceMemory index_memory =
+      initium::createBufferAllocation(device, physical_device, index_buffer,
+                                      initium::GpuLocalMemory)
+          .value();
+  vkBindBufferMemory(device, index_buffer, index_memory, 0);
 
   initium::BufferParams staging_buffer_params = {
       .size = staging_bytes, .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
@@ -272,21 +327,73 @@ int main()
   void *staging_data = nullptr;
   vkMapMemory(device, staging_memory, 0, staging_bytes, 0, &staging_data);
   memcpy(staging_data, vertices.data(), vertice_bytes);
+  memcpy((uint8_t *)staging_data + vertice_bytes, indices.data(), indice_bytes);
+  memcpy((uint8_t*)staging_data + vertice_bytes + indice_bytes, tex_data, tex_bytes);
   vkUnmapMemory(device, staging_memory);
+  stbi_image_free(tex_data);
 
   if (initium::recordCommandBuffer(
           transfer_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-          [vertex_buffer, vertices, vertice_bytes, staging_buffer](VkCommandBuffer command_buffer)
+          [vertex_buffer, vertices, vertice_bytes, index_buffer, indices,
+           indice_bytes, tex_width, tex_height, tex_image, staging_buffer](VkCommandBuffer command_buffer)
           {
+            size_t staging_offset = 0;
+
             VkBufferCopy vertex_region = {
-                .srcOffset = 0, .dstOffset = 0, .size = vertice_bytes};
+                .srcOffset = staging_offset, .dstOffset = 0, .size = vertice_bytes};
             vkCmdCopyBuffer(command_buffer, staging_buffer, vertex_buffer, 1,
                             &vertex_region);
+            staging_offset += vertice_bytes;
+
+            VkBufferCopy index_region = {.srcOffset = staging_offset,
+                                         .dstOffset = 0,
+                                         .size = indice_bytes};
+            vkCmdCopyBuffer(command_buffer, staging_buffer, index_buffer, 1,
+                            &index_region);
+            staging_offset += indice_bytes;
+
+            VkImageMemoryBarrier transition_barrier{};
+            transition_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            transition_barrier.image = tex_image;
+            transition_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            transition_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            transition_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            transition_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            transition_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            transition_barrier.subresourceRange.baseMipLevel = 0;
+            transition_barrier.subresourceRange.levelCount = 1;
+            transition_barrier.subresourceRange.baseArrayLayer = 0;
+            transition_barrier.subresourceRange.layerCount = 1;
+            transition_barrier.srcAccessMask = 0;
+            transition_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr,
+                                 0, nullptr, 1, &transition_barrier);
+                                           
+            VkBufferImageCopy tex_region = {
+              .bufferOffset = staging_offset,
+              .bufferRowLength = (uint32_t)tex_width,
+              .bufferImageHeight = (uint32_t)tex_height,
+              .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 },
+              .imageOffset = VkOffset3D(0, 0, 0),
+              .imageExtent = VkExtent3D(tex_width, tex_height, 1)
+            };
+            vkCmdCopyBufferToImage(command_buffer, staging_buffer, tex_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &tex_region);
+
+            transition_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            transition_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            transition_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr,
+                                 0, nullptr, 1, &transition_barrier);
           }) != VK_SUCCESS)
   {
-    printf("Failed to record transfer buffer\n");
+    printf("Failed to record buffer transfer buffer\n");
     return 1;
   }
+
+
 
   VkSubmitInfo transfer_submit{};
   transfer_submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -309,17 +416,125 @@ int main()
   std::vector<VkVertexInputAttributeDescription> attribute_descriptors(2);
   attribute_descriptors[0].binding = 0;
   attribute_descriptors[0].location = 0;
-  attribute_descriptors[0].format = VK_FORMAT_R32G32_SFLOAT;
+  attribute_descriptors[0].format = VK_FORMAT_R32G32B32_SFLOAT;
   attribute_descriptors[0].offset = offsetof(Vertex, pos);
 
   attribute_descriptors[1].binding = 0;
   attribute_descriptors[1].location = 1;
-  attribute_descriptors[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-  attribute_descriptors[1].offset = offsetof(Vertex, colour);
+  attribute_descriptors[1].format = VK_FORMAT_R32G32_SFLOAT;
+  attribute_descriptors[1].offset = offsetof(Vertex, uv);
 
+  // Descriptors
+  struct BindingUniformObject
+  {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+    glm::mat4 mvp;
+  };
+
+  std::vector<VkDescriptorSetLayoutBinding> layout_bindings(2);
+
+  VkDescriptorSetLayoutBinding matrix_set_binding{};
+  matrix_set_binding.binding = 0;
+  matrix_set_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  matrix_set_binding.descriptorCount = 1;
+  matrix_set_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  matrix_set_binding.pImmutableSamplers = nullptr;
+
+  VkDescriptorSetLayoutBinding texture_set_binding{};
+  texture_set_binding.binding = 1;
+  texture_set_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  texture_set_binding.descriptorCount = 1;
+  texture_set_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  texture_set_binding.pImmutableSamplers = nullptr;
+
+  layout_bindings[0] = matrix_set_binding;
+  layout_bindings[1] = texture_set_binding;
+
+  auto set_layout_result =
+      initium::createDescriptorLayout(device, layout_bindings);
+  if (!set_layout_result.has_value())
+  {
+    printf("Failed to create desciptor set layout\n");
+    return 1;
+  }
+  VkDescriptorSetLayout set_layout = set_layout_result.value();
+  std::vector<VkDescriptorSetLayout> set_layouts(max_frames_in_flight,
+                                                 set_layout);
+
+  std::vector<VkBuffer> binding_uniform_buffers(max_frames_in_flight);
+  std::vector<VkDeviceMemory> binding_uniform_memory(max_frames_in_flight);
+  std::vector<void *> binding_buffer_mappings(max_frames_in_flight);
+
+  for (int i = 0; i < max_frames_in_flight; i++)
+  {
+    initium::BufferParams buffer_params = {
+        .size = sizeof(BindingUniformObject),
+        .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    };
+
+    binding_uniform_buffers[i] =
+        initium::createBuffer(device, buffer_params).value();
+    binding_uniform_memory[i] =
+        initium::createBufferAllocation(device, physical_device,
+                                        binding_uniform_buffers[i],
+                                        initium::GpuLocalHostCoherent)
+            .value();
+    vkBindBufferMemory(device, binding_uniform_buffers[i],
+                       binding_uniform_memory[i], 0);
+
+    vkMapMemory(device, binding_uniform_memory[i], 0,
+                sizeof(BindingUniformObject), 0, &binding_buffer_mappings[i]);
+  }
+
+  VkDescriptorPoolSize matrix_binding_size{};
+  matrix_binding_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  matrix_binding_size.descriptorCount = max_frames_in_flight;
+
+  VkDescriptorPoolSize tex_binding_size{};
+  tex_binding_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  tex_binding_size.descriptorCount = max_frames_in_flight;
+
+  std::vector<VkDescriptorPoolSize> pool_sizes = { matrix_binding_size, tex_binding_size };
+
+  auto descriptor_pool_result =
+      initium::createDescriptorPool(device, pool_sizes, max_frames_in_flight);
+  if (!descriptor_pool_result.has_value())
+  {
+    printf("Failed to create descriptor pool\n");
+    return 1;
+  }
+  VkDescriptorPool descriptor_pool = descriptor_pool_result.value();
+
+  auto descriptor_sets_result = initium::allocateDescriptorSets(
+      device, descriptor_pool, set_layouts, max_frames_in_flight);
+  if (!descriptor_sets_result.has_value())
+  {
+    printf("Failed to allocate descriptor sets\n");
+    return 1;
+  }
+  std::vector<VkDescriptorSet> descriptor_sets = descriptor_sets_result.value();
+
+  for (int i = 0; i < max_frames_in_flight; i++) {
+    VkDescriptorImageInfo image_info{};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = tex_image_view;
+    image_info.sampler = tex_sampler;
+
+    VkWriteDescriptorSet desc_write{};
+    desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    desc_write.dstSet = descriptor_sets[i];
+    desc_write.dstBinding = 1;
+    desc_write.dstArrayElement = 0;
+    desc_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    desc_write.descriptorCount = 1;
+    desc_write.pImageInfo = &image_info;
+    vkUpdateDescriptorSets(device, 1, &desc_write, 0, nullptr);
+  }
 
   // Pipeline
-  initium::LayoutParams layout_params = {.set_layouts = {},
+  initium::LayoutParams layout_params = {.set_layouts = {set_layout},
                                          .push_ranges = {}};
 
   auto layout_result = initium::createPipelineLayout(device, layout_params);
@@ -347,7 +562,7 @@ int main()
       .scissors = {scissor_params},
 
       .cull_mode = VK_CULL_MODE_BACK_BIT,
-      .front_face = VK_FRONT_FACE_CLOCKWISE,
+      .front_face = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 
       .attachment_params = {fb_attachment}};
   auto pipeline_result =
@@ -452,6 +667,36 @@ int main()
     vkWaitForFences(device, 1, &in_flight[i_f_index], VK_TRUE, UINT64_MAX);
     vkResetFences(device, 1, &in_flight[i_f_index]);
 
+    BindingUniformObject ubo{};
+    ubo.model =
+        glm::rotate(glm::mat4(1.0f), glm::radians((float)frame_number / 128.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view =
+        glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f),
+                                (float)surface_width / (float)surface_height,
+                                0.1f, 10.0f);
+    ubo.proj[1][1] *= -1.0f;
+    ubo.mvp = ubo.proj * ubo.view * ubo.model;
+    memcpy(binding_buffer_mappings[i_f_index], &ubo,
+           sizeof(BindingUniformObject));
+
+    VkDescriptorBufferInfo desc_buffer_info{};
+    desc_buffer_info.buffer = binding_uniform_buffers[i_f_index];
+    desc_buffer_info.offset = 0;
+    desc_buffer_info.range = sizeof(BindingUniformObject);
+
+    VkWriteDescriptorSet desc_write{};
+    desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    desc_write.dstSet = descriptor_sets[i_f_index];
+    desc_write.dstBinding = 0;
+    desc_write.dstArrayElement = 0;
+    desc_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc_write.descriptorCount = 1;
+    desc_write.pBufferInfo = &desc_buffer_info;
+    vkUpdateDescriptorSets(device, 1, &desc_write, 0, nullptr);
+
     uint32_t free_image_index;
     if (vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
                               image_available[i_f_index], VK_NULL_HANDLE,
@@ -477,8 +722,9 @@ int main()
     if (initium::recordCommandBuffer(
             command_buffers[i_f_index], 0,
             [pass_begin_info, pipeline, layout, viewport, scissor,
-             vertex_buffer, vertices, i_f_index]
-			(VkCommandBuffer command_buffer)
+             vertex_buffer, index_buffer, descriptor_sets, vertices, indices,
+             i_f_index](VkCommandBuffer command_buffer)
+
             {
               vkCmdBeginRenderPass(command_buffer, &pass_begin_info,
                                    VK_SUBPASS_CONTENTS_INLINE);
@@ -490,7 +736,12 @@ int main()
               VkDeviceSize vertex_offsets = {0};
               vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer,
                                      &vertex_offsets);
-              vkCmdDraw(command_buffer, vertices.size(), 1, 0, 0);
+              vkCmdBindIndexBuffer(command_buffer, index_buffer, 0,
+                                   VK_INDEX_TYPE_UINT16);
+              vkCmdBindDescriptorSets(
+                  command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1,
+                  &descriptor_sets[i_f_index], 0, nullptr);
+              vkCmdDrawIndexed(command_buffer, indices.size(), 1, 0, 0, 0);
 
               vkCmdEndRenderPass(command_buffer);
             }) != VK_SUCCESS)
@@ -543,8 +794,24 @@ int main()
 
   vkDeviceWaitIdle(device);
 
+  vkDestroySampler(device, tex_sampler, nullptr);
+  vkDestroyImageView(device, tex_image_view, nullptr);
+  vkDestroyImage(device, tex_image, nullptr);
+  vkFreeMemory(device, tex_memory, nullptr);
+
+  for (size_t i = 0; i < max_frames_in_flight; i++)
+  {
+    vkDestroyBuffer(device, binding_uniform_buffers[i], nullptr);
+    vkFreeMemory(device, binding_uniform_memory[i], nullptr);
+  }
+
+  vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
+  vkDestroyDescriptorSetLayout(device, set_layout, nullptr);
+
   vkDestroyBuffer(device, vertex_buffer, nullptr);
   vkFreeMemory(device, vertex_memory, nullptr);
+  vkDestroyBuffer(device, index_buffer, nullptr);
+  vkFreeMemory(device, index_memory, nullptr);
 
   // Cleanup
   for (int i = 0; i < max_frames_in_flight; i++)

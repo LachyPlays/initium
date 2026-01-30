@@ -10,6 +10,7 @@ target_sources(initium PRIVATE
     buffer.cpp
     image.cpp
     descriptor.cpp
+    allocation.cpp
 )
 
 target_include_directories(initium
