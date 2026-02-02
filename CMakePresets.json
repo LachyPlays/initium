@@ -30,6 +30,20 @@
       }
     },
     {
+      "name": "windows-ninja",
+      "displayName": "Windows (Ninja)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
       "name": "linux-ninja",
       "displayName": "Linux (Ninja)",
       "generator": "Ninja",
