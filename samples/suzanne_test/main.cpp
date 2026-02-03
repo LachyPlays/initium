@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
   glfwInit();
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  GLFWwindow *window = glfwCreateWindow(600, 400, "Suzanne test", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(1280, 720, "Suzanne test", NULL, NULL);
 
   uint32_t glfw_extension_count = 0;
   const char **glfw_extensions_raw =
@@ -92,7 +92,7 @@ int main(int argc, char* argv[])
        .surface = surface,
        .window_size = VkExtent2D(surface_width, surface_height),
        .format = swapchain_format,
-       .present_mode = VK_PRESENT_MODE_MAILBOX_KHR,
+       .present_mode = VK_PRESENT_MODE_FIFO_KHR,
        .min_surface_count = max_frames_in_flight,
        .usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT}};
 
@@ -296,16 +296,44 @@ int main(int argc, char* argv[])
   uint8_t* vert_nor_start = model.buffers[vert_nor_view.buffer].data.data() + vert_nor_view.byteOffset + vert_nor_accessor.byteOffset;
   size_t vert_nor_stride = vert_nor_accessor.ByteStride(vert_nor_view);
 	
+  tinygltf::Accessor vert_uv_accessor = model.accessors[model.meshes[0].primitives[0].attributes["TEXCOORD_0"]];
+  tinygltf::BufferView vert_uv_view = model.bufferViews[vert_uv_accessor.bufferView];
+  uint8_t* vert_uv_start = model.buffers[vert_uv_view.buffer].data.data() + vert_uv_view.byteOffset + vert_nor_accessor.byteOffset;
+  size_t vert_uv_stride = vert_uv_accessor.ByteStride(vert_uv_view);
+
+  tinygltf::Material model_mat = model.materials[model.meshes[0].primitives[0].material];
+  tinygltf::Texture model_basetex = model.textures[model_mat.values["baseColorTexture"].TextureIndex()];
+  tinygltf::Image model_baseimg = model.images[model_basetex.source];
+
+  unsigned char* baseimg_data = model_baseimg.image.data();
+  int baseimg_width = model_baseimg.width, baseimg_height = model_baseimg.height;
+  size_t baseimg_bytes = baseimg_width * baseimg_height * 4;
+
+  VkImage basetex_image = initium::createImage(device, {
+    .width = baseimg_width, .height = baseimg_height,
+    .type = VK_IMAGE_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_SRGB,
+    .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, .queue_families = {}
+  }).value();
+  VkDeviceMemory basetex_memory = initium::createImageAllocation(device, physical_device, basetex_image, initium::GpuLocalMemory).value();
+  vkBindImageMemory(device, basetex_image, basetex_memory, 0);
+  VkImageView basetex_view = initium::create_image_view(device, {
+    .image = basetex_image, .view_type = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_SRGB,
+    .aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT 
+  }).value();
+  
+  VkSampler basetex_sampler = initium::createSampler(device, { .mag_filter = VK_FILTER_LINEAR, .min_filter = VK_FILTER_LINEAR }).value();
+
 	typedef struct
   {
     glm::vec3 pos;
     glm::vec3 normal;
-    glm::vec3 colour;
+    glm::vec2 uv;
   } Vertex;
   std::vector<Vertex> vertices(vert_pos_accessor.count);
 	for(int i = 0; i < vert_pos_accessor.count; i++) {
     const float* vert_pos_data = (const float*)(vert_pos_start + (i * vert_pos_stride));
     const float* vert_nor_data = (const float*)(vert_nor_start + (i * vert_nor_stride));
+    const float* vert_uv_data  = (const float*)(vert_uv_start  + (i * vert_uv_stride ));
 
     glm::vec3 position = glm::vec3(
       vert_pos_data[0], 
@@ -319,12 +347,17 @@ int main(int argc, char* argv[])
       vert_nor_data[2]
     );
 
-    vertices[i] = Vertex{position, normal, glm::vec3(position.x, position.y, position.z)};
+    glm::vec2 uv = glm::vec2(
+      vert_uv_data[0],
+      vert_uv_data[1]
+    );
+
+    vertices[i] = Vertex{position, normal, uv};
 	}
 
   size_t vertice_bytes = sizeof(Vertex) * vertices.size();
   size_t indice_bytes = sizeof(uint16_t) * indices.size();
-  size_t staging_bytes = vertice_bytes + indice_bytes;
+  size_t staging_bytes = vertice_bytes + indice_bytes + baseimg_bytes;
 
   initium::BufferParams vertex_buffer_params = {
       .size = vertice_bytes,
@@ -364,12 +397,15 @@ int main(int argc, char* argv[])
   vkMapMemory(device, staging_memory, 0, staging_bytes, 0, &staging_data);
   memcpy(staging_data, vertices.data(), vertice_bytes);
   memcpy((uint8_t *)staging_data + vertice_bytes, indices.data(), indice_bytes);
+  memcpy((uint8_t *)staging_data + vertice_bytes + indice_bytes, baseimg_data, baseimg_bytes);
   vkUnmapMemory(device, staging_memory);
 
   if (initium::recordCommandBuffer(
           transfer_buffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-          [vertex_buffer, vertices, vertice_bytes, index_buffer, indices,
-           indice_bytes, staging_buffer](VkCommandBuffer command_buffer)
+          [vertex_buffer, vertices, vertice_bytes, 
+           index_buffer, indices, indice_bytes, 
+           basetex_image, baseimg_width, baseimg_height, 
+           staging_buffer](VkCommandBuffer command_buffer)
           {
             VkBufferCopy vertex_region = {
                 .srcOffset = 0, .dstOffset = 0, .size = vertice_bytes};
@@ -380,6 +416,42 @@ int main(int argc, char* argv[])
                                          .size = indice_bytes};
             vkCmdCopyBuffer(command_buffer, staging_buffer, index_buffer, 1,
                             &index_region);
+
+            VkImageMemoryBarrier transition_barrier{};
+            transition_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            transition_barrier.image = basetex_image;
+            transition_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            transition_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            transition_barrier.srcAccessMask = 0;
+            transition_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition_barrier.subresourceRange = {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, 
+              .baseMipLevel = 0, .levelCount = 1,
+              .baseArrayLayer = 0, .layerCount = 1,
+            };
+            vkCmdPipelineBarrier(
+              command_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 
+              0, 0, nullptr, 0, nullptr, 1, &transition_barrier);
+
+            VkBufferImageCopy texture_region = { 
+              .bufferOffset = vertice_bytes + indice_bytes,
+              .bufferRowLength = static_cast<uint32_t>(baseimg_width), 
+              .bufferImageHeight = static_cast<uint32_t>(baseimg_height),
+              .imageSubresource = { 
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0,
+                .baseArrayLayer = 0, .layerCount = 1 },
+              .imageOffset = 0, .imageExtent = VkExtent3D(baseimg_width, baseimg_height, 1)
+            };
+            vkCmdCopyBufferToImage(command_buffer, staging_buffer, 
+              basetex_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &texture_region);
+            transition_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            transition_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            transition_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            transition_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            
+            vkCmdPipelineBarrier(
+              command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 
+              0, 0, nullptr, 0, nullptr, 1, &transition_barrier);
           }) != VK_SUCCESS)
   {
     printf("Failed to record transfer buffer\n");
@@ -417,28 +489,37 @@ int main(int argc, char* argv[])
 
   attribute_descriptors[2].binding = 0;
   attribute_descriptors[2].location = 2;
-  attribute_descriptors[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-  attribute_descriptors[2].offset = offsetof(Vertex, colour);
+  attribute_descriptors[2].format = VK_FORMAT_R32G32_SFLOAT;
+  attribute_descriptors[2].offset = offsetof(Vertex, uv);
 
   // Descriptors
   struct BindingUniformObject
   {
     glm::mat4 model;
+    glm::mat4 rotation;
     glm::mat4 view;
     glm::mat4 proj;
     glm::mat4 mvp;
   };
 
-  std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+  std::vector<VkDescriptorSetLayoutBinding> layout_bindings(2);
 
-  VkDescriptorSetLayoutBinding set_binding{};
-  set_binding.binding = 0;
-  set_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  set_binding.descriptorCount = 1;
-  set_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-  set_binding.pImmutableSamplers = nullptr;
+  VkDescriptorSetLayoutBinding mat_binding{};
+  mat_binding.binding = 0;
+  mat_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  mat_binding.descriptorCount = 1;
+  mat_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  mat_binding.pImmutableSamplers = nullptr;
 
-  layout_bindings.push_back(set_binding);
+  VkDescriptorSetLayoutBinding tex_binding{};
+  tex_binding.binding = 1;
+  tex_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  tex_binding.descriptorCount = 1;
+  tex_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  tex_binding.pImmutableSamplers = nullptr;
+
+  layout_bindings[0] = mat_binding;
+  layout_bindings[1] = tex_binding;
 
   auto set_layout_result =
       initium::createDescriptorLayout(device, layout_bindings);
@@ -476,11 +557,15 @@ int main(int argc, char* argv[])
                 sizeof(BindingUniformObject), 0, &binding_buffer_mappings[i]);
   }
 
-  VkDescriptorPoolSize descriptor_pool_size{};
-  descriptor_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  descriptor_pool_size.descriptorCount = max_frames_in_flight;
+  VkDescriptorPoolSize matrix_pool_size{};
+  matrix_pool_size.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  matrix_pool_size.descriptorCount = max_frames_in_flight;
 
-  std::vector<VkDescriptorPoolSize> pool_sizes{descriptor_pool_size};
+  VkDescriptorPoolSize sampler_pool_size{};
+  sampler_pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  sampler_pool_size.descriptorCount = max_frames_in_flight;
+
+  std::vector<VkDescriptorPoolSize> pool_sizes{matrix_pool_size, sampler_pool_size};
 
   auto descriptor_pool_result =
       initium::createDescriptorPool(device, pool_sizes, max_frames_in_flight);
@@ -499,6 +584,25 @@ int main(int argc, char* argv[])
     return 1;
   }
   std::vector<VkDescriptorSet> descriptor_sets = descriptor_sets_result.value();
+
+  for (int i = 0; i < max_frames_in_flight; i++) {
+    VkDescriptorImageInfo image_info{};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = basetex_view;
+    image_info.sampler = basetex_sampler;
+
+    VkWriteDescriptorSet desc_write{};
+    desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    desc_write.dstSet = descriptor_sets[i];
+    desc_write.dstBinding = 1;
+    desc_write.dstArrayElement = 0;
+    desc_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    desc_write.descriptorCount = 1;
+    desc_write.pImageInfo = &image_info;
+
+    vkUpdateDescriptorSets(device, 1, &desc_write, 0, nullptr);
+  }
+
 
   // Pipeline
   initium::LayoutParams layout_params = {.set_layouts = {set_layout},
@@ -638,11 +742,10 @@ int main(int argc, char* argv[])
     vkResetFences(device, 1, &in_flight[i_f_index]);
 
     BindingUniformObject ubo{};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f),
-                    glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.model =
-        glm::rotate(ubo.model, glm::radians((float)frame_number / 128.0f),
+        glm::rotate(glm::mat4(1.0f), glm::radians((float)frame_number / 128.0f),
                     glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.rotation = glm::transpose(glm::inverse(glm::mat3(ubo.model)));
     ubo.view =
         glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                     glm::vec3(0.0f, 0.0f, 1.0f));
@@ -670,11 +773,12 @@ int main(int argc, char* argv[])
     vkUpdateDescriptorSets(device, 1, &desc_write, 0, nullptr);
 
     uint32_t free_image_index;
-    if (vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
+    VkResult acquire_result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX,
                               image_available[i_f_index], VK_NULL_HANDLE,
-                              &free_image_index) != VK_SUCCESS)
+                              &free_image_index);
+    if (acquire_result != VK_SUCCESS)
     {
-      printf("Failed to acquire next image\n");
+      printf("Failed to acquire next image with error : %i\n", acquire_result);
       return 1;
     }
 
@@ -765,6 +869,15 @@ int main(int argc, char* argv[])
   }
 
   vkDeviceWaitIdle(device);
+
+  vkDestroyImageView(device, depth_image_view, nullptr);
+  vkDestroyImage(device, depth_image, nullptr);
+  vkFreeMemory(device, depth_memory, nullptr);
+
+  vkDestroySampler(device, basetex_sampler, nullptr);
+  vkDestroyImageView(device, basetex_view, nullptr);
+  vkDestroyImage(device, basetex_image, nullptr);
+  vkFreeMemory(device, basetex_memory, nullptr);
 
   for (size_t i = 0; i < max_frames_in_flight; i++)
   {

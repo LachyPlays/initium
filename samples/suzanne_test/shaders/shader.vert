@@ -2,6 +2,7 @@
 
 layout(binding = 0) uniform UniformBufferObject {
     mat4 model;
+    mat4 rotation;
     mat4 view;
     mat4 proj;
     mat4 mvp;
@@ -9,12 +10,14 @@ layout(binding = 0) uniform UniformBufferObject {
 
 layout (location = 0) in vec3 inVertexPos;
 layout (location = 1) in vec3 inVertexNormal;
-layout (location = 2) in vec3 inVertexColour;
+layout (location = 2) in vec2 inUV;
 
-layout (location = 1) out vec4 vertexColour;
+layout (location = 1) out vec4 fragNormal;
+layout (location = 2) out vec2 fragUV;
 
 void main() {
-    gl_Position = UBO.mvp * vec4(inVertexPos, 1.0f);
+    fragNormal = UBO.rotation * vec4(inVertexNormal, 1.0f);
+    fragUV = inUV;
 
-    vertexColour = vec4(inVertexColour, 1.0f);
+    gl_Position = UBO.mvp * vec4(inVertexPos, 1.0f);
 }

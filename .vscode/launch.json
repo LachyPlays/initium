@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Sample (Windows)",
+            "name": "Debug Sample (msvc with vsdbg)",
             "type": "cppvsdbg",              
             "request": "launch",
             "program": "${workspaceFolder}/build/samples/${input:sampleExecutable}/Debug/${input:sampleExecutable}.exe",
@@ -14,7 +14,19 @@
             "preLaunchTask": "CMake: Build Project"
         },
         {
-            "name": "Debug Sample (Linux)",
+            "name": "Debug Sample (Ninja with vsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples/${input:sampleExecutable}/${input:sampleExecutable}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build/samples/${input:sampleExecutable}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "CMake: Build Project"
+        },
+        {
+            "name": "Debug Sample (Ninja with gdb)",
             "type": "cppdbg",
             "MIMode": "gdb",           
             "request": "launch",
