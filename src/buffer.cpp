@@ -1,6 +1,6 @@
 #include "buffer.hpp"
 
-std::optional<VkBuffer> initium::createBuffer(VkDevice device, initium::BufferParams& params) {
+std::optional<VkBuffer> initium::createBuffer(VkDevice device, initium::BufferParams params) {
 	VkBufferCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	create_info.flags = params.flags;

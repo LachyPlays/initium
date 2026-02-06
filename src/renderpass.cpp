@@ -3,7 +3,7 @@
 #include <optional>
 #include <vulkan/vulkan.h>
 
-std::optional<VkRenderPass> initium::createRenderPass(VkDevice device, initium::RenderPassParams &params) {
+std::optional<VkRenderPass> initium::createRenderPass(VkDevice device, initium::RenderPassParams params) {
 	// Setup attachment descriptors
 	std::vector<VkAttachmentDescription> attachment_descriptors{};
 	for (auto &attachment : params.attachments) {

@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
   std::vector<VkImageView> swapchain_views(swapchain_image_count);
   for (int i = 0; i < swapchain_images.size(); i++)
   {
-    auto image_view_result = initium::create_image_view(
+    auto image_view_result = initium::createImageView(
         device, {
                     .image = swapchain_images[i],
                     .view_type = VK_IMAGE_VIEW_TYPE_2D,
@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
   VkImage depth_image = initium::createImage(device, depth_params).value();
   VkDeviceMemory depth_memory = initium::createImageAllocation(device, physical_device, depth_image, initium::GpuLocalMemory).value();
   vkBindImageMemory(device, depth_image, depth_memory, 0);
-  VkImageView depth_image_view = initium::create_image_view(device, {.image = depth_image, .view_type = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_D32_SFLOAT, .aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT}).value();
+  VkImageView depth_image_view = initium::createImageView(device, {.image = depth_image, .view_type = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_D32_SFLOAT, .aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT}).value();
 
   // Attachments
   initium::AttachmentParams fb_attachment = {
@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
   }).value();
   VkDeviceMemory basetex_memory = initium::createImageAllocation(device, physical_device, basetex_image, initium::GpuLocalMemory).value();
   vkBindImageMemory(device, basetex_image, basetex_memory, 0);
-  VkImageView basetex_view = initium::create_image_view(device, {
+  VkImageView basetex_view = initium::createImageView(device, {
     .image = basetex_image, .view_type = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_SRGB,
     .aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT 
   }).value();

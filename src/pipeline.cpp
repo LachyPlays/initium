@@ -32,7 +32,7 @@ std::optional<VkShaderModule> initium::loadShaderModule(VkDevice device, const c
 	}
 }
 
-std::optional<VkPipelineLayout> initium::createPipelineLayout(VkDevice device, initium::LayoutParams &params) {
+std::optional<VkPipelineLayout> initium::createPipelineLayout(VkDevice device, initium::LayoutParams params) {
 	VkPipelineLayoutCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	create_info.pSetLayouts = params.set_layouts.data();

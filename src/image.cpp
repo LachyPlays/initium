@@ -1,6 +1,6 @@
 #include "image.hpp"
 
-std::optional<VkImageView> initium::create_image_view(VkDevice device, initium::ImageViewParams params) {
+std::optional<VkImageView> initium::createImageView(VkDevice device, initium::ImageViewParams params) {
 	VkImageViewCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	create_info.image = params.image;

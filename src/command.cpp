@@ -1,6 +1,6 @@
 #include "command.hpp"
 
-std::optional<VkCommandPool> initium::createCommandPool(VkDevice device, initium::PoolParams& params) {
+std::optional<VkCommandPool> initium::createCommandPool(VkDevice device, initium::PoolParams params) {
 	VkCommandPoolCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	create_info.flags = params.flags;

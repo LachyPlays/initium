@@ -16,7 +16,7 @@ namespace initium {
 		int layers = 1;
 	};
 
-	std::optional<std::vector<VkFramebuffer>> createFramebufferFromViews(VkDevice device, FramebufferParams &params);
+	std::optional<std::vector<VkFramebuffer>> createFramebufferFromViews(VkDevice device, FramebufferParams params);
 };
 
 #endif

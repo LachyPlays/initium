@@ -137,7 +137,7 @@ int main()
   std::vector<VkImageView> swapchain_views(swapchain_image_count);
   for (int i = 0; i < swapchain_images.size(); i++)
   {
-    auto image_view_result = initium::create_image_view(
+    auto image_view_result = initium::createImageView(
         device, {
                     .image = swapchain_images[i],
                     .view_type = VK_IMAGE_VIEW_TYPE_2D,
@@ -248,7 +248,7 @@ int main()
   VkImage tex_image = initium::createImage(device, tex_params).value();
   VkDeviceMemory tex_memory = initium::createImageAllocation(device, physical_device, tex_image, initium::GpuLocalMemory).value();
   vkBindImageMemory(device, tex_image, tex_memory, 0);
-  VkImageView tex_image_view = initium::create_image_view(device, {
+  VkImageView tex_image_view = initium::createImageView(device, {
     .image = tex_image, .view_type = VK_IMAGE_VIEW_TYPE_2D,
     .format = VK_FORMAT_R8G8B8A8_SRGB, .aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT}).value();
 

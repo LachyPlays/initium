@@ -1,6 +1,6 @@
 #include "framebuffer.hpp"
 
-std::optional<std::vector<VkFramebuffer>> initium::createFramebufferFromViews(VkDevice device, initium::FramebufferParams& params) {
+std::optional<std::vector<VkFramebuffer>> initium::createFramebufferFromViews(VkDevice device, initium::FramebufferParams params) {
 	std::vector<VkFramebuffer> framebuffers{};
 	
 	for (VkImageView& view : params.image_views) {

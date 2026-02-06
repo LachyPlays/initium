@@ -16,7 +16,7 @@ namespace initium {
 		std::vector<uint32_t> concurrent_queue_family_indices = {};
 	};
 
-	std::optional<VkBuffer> createBuffer(VkDevice device, BufferParams& params);
+	std::optional<VkBuffer> createBuffer(VkDevice device, BufferParams params);
 	std::optional<VkDeviceMemory> createBufferAllocation(VkDevice device, VkPhysicalDevice phys_device, VkBuffer buffer, initium::MemoryType type);
 };
 

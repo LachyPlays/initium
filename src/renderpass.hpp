@@ -16,7 +16,7 @@ namespace initium {
 		std::vector<VkSubpassDependency> dependencies;
 	};
 
-	std::optional<VkRenderPass> createRenderPass(VkDevice device, RenderPassParams &params);
+	std::optional<VkRenderPass> createRenderPass(VkDevice device, RenderPassParams params);
 };
 
 #endif

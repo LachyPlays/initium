@@ -134,7 +134,7 @@ int main()
   std::vector<VkImageView> swapchain_views(swapchain_image_count);
   for (int i = 0; i < swapchain_images.size(); i++)
   {
-    auto image_view_result = initium::create_image_view(
+    auto image_view_result = initium::createImageView(
         device, {
                     .image = swapchain_images[i],
                     .view_type = VK_IMAGE_VIEW_TYPE_2D,

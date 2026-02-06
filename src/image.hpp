@@ -61,7 +61,7 @@ namespace initium {
 		float max_lod = 0.0f;
 	};
 
-	std::optional<VkImageView> create_image_view(VkDevice device, ImageViewParams params);
+	std::optional<VkImageView> createImageView(VkDevice device, ImageViewParams params);
 	std::optional<VkImage> createImage(VkDevice device, ImageParams params);
 	std::optional<VkDeviceMemory> createImageAllocation(VkDevice device, VkPhysicalDevice phys_device, VkImage image, initium::MemoryType type);
 	std::optional<VkSampler> createSampler(VkDevice device, SamplerParams params);

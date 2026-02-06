@@ -141,7 +141,7 @@ namespace initium {
 	};
 
 	std::optional<VkShaderModule> loadShaderModule(VkDevice device, const char* filename);
-	std::optional<VkPipelineLayout> createPipelineLayout(VkDevice device, LayoutParams &params);
+	std::optional<VkPipelineLayout> createPipelineLayout(VkDevice device, LayoutParams params);
 	std::optional<VkPipeline> createPipeline(VkDevice device, VkPipelineLayout layout, VkRenderPass pass, PipelineParams &params);
 }
 
