@@ -1,5 +1,6 @@
 #include "device.hpp"
 
+#include <limits.h>
 #include <stdint.h>
 #include <set>
 #include <algorithm>

@@ -7,7 +7,7 @@ namespace initium {
 	struct SubpassParams {
 		VkPipelineBindPoint bind_point;
 		std::vector<VkAttachmentReference> colour_references;
-		VkAttachmentReference depth_attachment_ref = {};
+		VkAttachmentReference depth_attachment_ref = { .attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED };
 	};
 
 	struct RenderPassParams {
